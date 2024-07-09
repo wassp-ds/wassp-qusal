@@ -1,0 +1,13 @@
+base:
+  'dom0':
+    - match: nodegroup
+    - devops.create
+  'tpl-devops':
+    - devops.install
+  'dvm-devops':
+    - devops.configure-dvm
+  'devops':
+    - devops.configure
+  '(I@qubes:type:template or I@qubes:type:standalone) and (G@kernel:Linux or G@kernel:*BSD)':
+    - match: nodegroup
+    - sys-net.install-proxy
