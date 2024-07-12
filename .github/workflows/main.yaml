@@ -30,27 +30,31 @@ jobs:
       fail-fast: false
     runs-on: ubuntu-24.04
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - uses: actions/setup-python@v5
       - name: Update package list
-        run: sudo apt-get -y update
+        run: sudo apt-get update -y
       - name: Install OS packages
         # yamllint disable-line rule:line-length
-        run: sudo apt-get install -y python3-dev python3-pip shellcheck reuse ruby-mdl pylint
-      # gitlint is available on Debian but Ubuntu has an older version.
+        run: sudo apt-get install -y $(cat dependencies/debian.txt)
       - name: Remove externally managed python environment flag
         # yamllint disable-line rule:line-length
         run: sudo dpkg-divert --rename --add /usr/lib/$(py3versions -d)/EXTERNALLY-MANAGED
       - name: Install pip packages
-        run: pip3 install salt-lint gitlint
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-python@v5
+        run: pip3 install $(cat dependencies/pip.txt)
       - uses: pre-commit/action@v3.0.1
         env:
-          SPEC_VENDOR: Github Actions
-          SPEC_PACKAGER: Github Actions
-      - name: Lint commits
-        # yamllint disable-line rule:line-length
+          SPEC_VENDOR: Ben Grande
+          SPEC_PACKAGER: Ben Grande <ben.grande.b@gmail.com>
+      - uses: editorconfig-checker/action-editorconfig-checker@main
+      - name: Run Editorconfig Checker
+        run: |
+          editorconfig-checker
+          editorconfig-checker salt/dotfiles
+      - name: Lint commit messages
         run: |
           if test "${{ github.event_name}}" = "pull_request"
           then

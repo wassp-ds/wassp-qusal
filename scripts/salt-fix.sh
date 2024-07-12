@@ -3,7 +3,7 @@
 ## SPDX-FileCopyrightText: 2013 - 2018 Will Thames will@thames.id.au
 ## SPDX-FileCopyrightText: 2018 Ansible by Red Hat
 ## SPDX-FileCopyrightText: 2020 - 2023 Warpnet B.V.
-## SPDX-FileCopyrightText: 2023 Benjamin Grande M. S. <ben.grande.b@gmail.com>
+## SPDX-FileCopyrightText: 2023 - 2024 Benjamin Grande M. S. <ben.grande.b@gmail.com>
 ##
 ## SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -13,13 +13,24 @@
 set -eu
 
 command -v git >/dev/null || { echo "Missing program: git" >&2; exit 1; }
-cd "$(git rev-parse --show-toplevel)" || exit 1
+repo_toplevel="$(git rev-parse --show-toplevel)"
+test -d "${repo_toplevel}" || exit 1
+unset repo_toplevel
 
 find_tool="$(./scripts/best-program.sh fd fdfind find)"
 
 case "${find_tool}" in
-  fd|fdfind) files="$(${find_tool} . minion.d/ --extension=conf) $(${find_tool} . salt/ --max-depth=2 --type=f --extension=sls)";;
-  find) files="$(find minion.d/ -type f -name "*.conf") $(find salt/ -maxdepth 2 -type f -name '*.sls')";;
+  fd|fdfind)
+    conf_files="$(${find_tool} . minion.d/ -e conf)"
+    sls_files="$(${find_tool} . salt/ -d 2 -t f -e sls)"
+    files="${conf_files}\n${sls_files}"
+    ;;
+  find)
+    conf_files="$(find minion.d/ -type f -name "*.conf")"
+    sls_files="$(find salt/ -maxdepth 2 -type f -name '*.sls')"
+    files="${conf_files}\n${sls_files}"
+    ;;
+  *) echo "Unsupported find tool" >&2; exit 1;;
 esac
 
 ## 201 - Fix trailing whitespace:

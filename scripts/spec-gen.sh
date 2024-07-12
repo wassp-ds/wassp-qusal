@@ -1,6 +1,6 @@
 #!/bin/sh
 
-## SPDX-FileCopyrightText: 2023 Benjamin Grande M. S. <ben.grande.b@gmail.com>
+## SPDX-FileCopyrightText: 2023 - 2024 Benjamin Grande M. S. <ben.grande.b@gmail.com>
 ##
 ## SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -27,8 +27,10 @@ escape_key(){
 ## Get scriptlet command, else fail safe.
 get_scriptlet(){
   scriptlet="$1"
+  scriptlet_begin="-- pkg:begin:${scriptlet} --"
+  scriptlet_end="-- pkg:end:${scriptlet} --"
   scriptlet="$(sed -n \
-    "/^<\!-- pkg:begin:${scriptlet} -->$/,/^<\!-- pkg:end:${scriptlet} -->$/p" \
+    "/^<\!${scriptlet_begin}>$/,/^<\!${scriptlet_end}>$/p" \
     "${readme}" | sed '/^```.*/d;/^\S*$/d;/^<\!-- pkg:/d;s/^sudo //')"
   if test -z "${scriptlet}"; then
     echo true
@@ -42,7 +44,11 @@ get_spec(){
 }
 
 gen_spec(){
-  project="${1}"
+  project="$(echo "${1}" | sed "s|salt/||;s|/.*||")"
+  if echo "${projects_seen}" | grep -qF " ${project} "; then
+    return
+  fi
+  projects_seen="${projects_seen} ${project} "
 
   if echo "${unwanted}" | grep -q "^${project}$"; then
     echo "warn: skipping spec generation of untracked formula: ${project}" >&2
@@ -66,15 +72,17 @@ gen_spec(){
 
   project_name="$(get_spec project)"
   version="$(get_spec version)"
-  license="$(get_spec license)"
   license_csv="$(get_spec license_csv)"
+  ## Ideally we would query the license, but it is a heavy call.
+  license="$(echo "${license_csv}" | sed "s/\,/ AND /g")"
   vendor="$(get_spec vendor)"
   packager="$(get_spec packager)"
   url="$(get_spec url)"
   bug_url="$(get_spec bug_url)"
   requires="$(get_spec requires)"
   summary="$(get_spec summary)"
-  description="$(escape_key text "$(get_spec description)")"
+  description="$(get_spec description)"
+  description="$(escape_key text "${description}")"
   file_roots="$(get_spec file_roots)"
   changelog="$(get_spec changelog)"
 
@@ -121,37 +129,55 @@ gen_spec(){
 
   if test "${2-}" = "test"; then
     if ! cmp -s "${target}" "${intended_target}"; then
-      echo "${0##*/}: error: File ${intended_target} is not up to date" >&2
-      echo "${0##*/}: error: Update the spec with: ${0##/*} ${project}" >&2
-      exit 1
+      echo "error: ${intended_target} is not up to date" >&2
+      diff --color=auto "${intended_target}" "${target}" || true
+      fail=1
+    else
+      unstaged_target="$(git diff --name-only "${intended_target}")" || true
+      if test -n "${unstaged_target}"; then
+        echo "warn: ${intended_target} is up to date but it is not staged" >&2
+      fi
     fi
   fi
 }
 
 case "${1-}" in
   -h|--?help) usage; exit 1;;
+  *) ;;
 esac
 
 command -v git >/dev/null || { echo "Missing program: git" >&2; exit 1; }
-cd "$(git rev-parse --show-toplevel)"
+repo_toplevel="$(git rev-parse --show-toplevel)"
+test -d "${repo_toplevel}" || exit 1
+unset repo_toplevel
 
 spec_get="./scripts/spec-get.sh"
-
 ignored="$(git ls-files --exclude-standard --others --ignored salt/)"
 untracked="$(git ls-files --exclude-standard --others salt/)"
 unwanted="$(printf %s"${ignored}\n${untracked}\n" \
             | grep "^salt/\S\+/README.md" | cut -d "/" -f2 | sort -u)"
 
-if test "${2-}" = "test"; then
-  gen_spec "${1}" test
-  exit
+fail=""
+gen_mode=""
+
+if test "${1-}" = "test"; then
+  gen_mode="test"
+  shift
 fi
 
-if test -z "${1-}"; then
-  # shellcheck disable=SC2046
+if echo "${@}" | grep -qE "(^scripts/| scripts/|/template.spec)" ||
+  test -z "${1-}"
+then
+  # shellcheck disable=SC2046,SC2312
   set -- $(find salt/ -mindepth 1 -maxdepth 1 -type d -printf '%f\n' \
-           | sort -d | tr "\n" " ")
+            | sort -d | tr "\n" " ")
 fi
-for p in "$@"; do
-  gen_spec "${p}"
+
+projects_seen=""
+for p in "${@}"; do
+  gen_spec "${p}" "${gen_mode}"
 done
+
+if test "${fail}" = "1" && test "${gen_mode}" = "test"; then
+  exit 1
+fi

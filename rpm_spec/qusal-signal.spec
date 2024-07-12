@@ -108,6 +108,12 @@ fi
 %dnl TODO: missing '%ghost', files generated during %post, such as Qrexec policies.
 
 %changelog
+* Mon Jul 08 2024 Ben Grande <ben.grande.b@gmail.com> - 523bca2
+- fix: conform files to editorconfig specification
+
+* Thu Jul 04 2024 Ben Grande <ben.grande.b@gmail.com> - 383c840
+- doc: lint markdown files
+
 * Mon Jun 24 2024 Ben Grande <ben.grande.b@gmail.com> - 1bec52b
 - fix: install correct repository for signal
 

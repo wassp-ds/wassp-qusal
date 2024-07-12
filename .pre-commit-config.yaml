@@ -1,24 +1,47 @@
+# yamllint disable-line rule:line-length
 # SPDX-FileCopyrightText: 2023 - 2024 Benjamin Grande M. S. <ben.grande.b@gmail.com>
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 ---
+
+default_install_hook_types:
+  - pre-commit
+
 repos:
+
   - repo: local
     hooks:
 
-      - id: unicode-prohibit
-        name: unicode-prohibit
-        entry: scripts/unicode-prohibit.sh
+      - id: unicode-lint
+        name: unicode-lint
+        entry: scripts/unicode-lint.sh
         language: script
         pass_filenames: true
         description: Prohibit Unicode
+
+      - id: spell-lint
+        name: spell-lint
+        entry: scripts/spell-lint.sh
+        language: script
+        pass_filenames: true
+        description: Spellcheck files
 
       - id: shell-lint
         name: shell-lint
         entry: scripts/shell-lint.sh
         language: script
         pass_filenames: true
+        # yamllint disable rule:line-length
+        files: >-
+          (\.sh|/rc\.local\.d/.*\.rc|/bin/.*|/rpc/.*|/network-hooks\.d/.*|
+          /qubes-firewall\.d/.*|/(lib-)?qubes-bind-dirs\.d/.*|
+          /\.config/(sh|bash|zsh|less|x11|git/shell|git/template/hooks)/.*|
+          /autostart-scripts/.*|/qvm-copy-dotfiles|/git-core/.*)
+        # yamllint disable rule:line-length
+        exclude: >-
+          \.(policy|asc|txt|top|sls|jinja|toml|vim|py|muttrc|nft|md|spec|
+          list|sources|repo|socket|timer|service|y(a)?ml)$
         description: Lint Shellscripts
 
       - id: markdown-lint
@@ -27,7 +50,7 @@ repos:
         language: script
         pass_filenames: true
         files: \.md$
-        description: Lint markdown files
+        description: Lint Markdown files
 
       - id: python-lint
         name: python-lint
@@ -35,15 +58,23 @@ repos:
         language: script
         pass_filenames: true
         files: \.py$
-        description: Lint python files
+        description: Lint Python files
 
       - id: salt-lint
         name: salt-lint
         entry: scripts/salt-lint.sh
         language: script
         pass_filenames: true
-        files: \.(sls|top)$
+        files: (^minion.d/.*.conf|\.(sls|top))$
         description: Lint Salt files
+
+      - id: yaml-lint
+        name: yaml-lint
+        entry: scripts/yaml-lint.sh
+        language: script
+        pass_filenames: true
+        files: \.(yaml|yml)$
+        description: Lint YAML files
 
       - id: qubesbuilder-gen
         name: qubesbuilder-gen
@@ -51,30 +82,25 @@ repos:
         args: [test]
         language: script
         pass_filenames: false
+        files: salt/\S+/README.md
         description: Check if .qubesbuilder is up to date
 
-# TODO: generate temporary spec and compare against staged one.
-#       - id: spec-gen
-#         name: spec-gen
-#         language: script
-#         entry: scripts/spec-gen.sh test
-#         args: [test]
-#         # pass_filenames: true
-#         description: Check if RPM SPEC files are up to date
+      - id: spec-gen
+        name: spec-gen
+        language: script
+        entry: scripts/spec-gen.sh
+        args: [test]
+        pass_filenames: true
+        # yamllint disable rule:line-length
+        files: >-
+          ^(rpm_spec/template/template.spec|salt/.*|
+          scripts/spec-(get|gen)\.sh)$
+        description: Check if RPM SPEC files are up to date
 
-      - id: reuse-lint
-        name: reuse-lint
+      - id: license-lint
+        name: license-lint
         entry: reuse
         args: [lint]
         language: python
         pass_filenames: false
         description: Lint files to comply with the REUSE Specification
-
-      - id: git-lint
-        name: git-lint
-        language: python
-        entry: gitlint
-        args: [--staged, --msg-filename]
-        stages: [commit-msg]
-        pass_filenames: true
-        description: Lint Git commits

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-## SPDX-FileCopyrightText: 2023 Benjamin Grande M. S. <ben.grande.b@gmail.com>
+## SPDX-FileCopyrightText: 2023 - 2024 Benjamin Grande M. S. <ben.grande.b@gmail.com>
 ##
 ## SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -9,11 +9,12 @@ set -eu
 
 usage(){
   names="$(find salt/ -mindepth 1 -maxdepth 1 -type d -printf '%f\n' \
-           | sort -d | tr "\n" " ")"
+            | sort -d | tr "\n" " ")"
+  keys_trimmed="$(echo "${keys}" | tr "\n" " ")"
   echo "Usage: ${0##*/} <NAME> <KEY>"
   echo "Example: ${0##*/} qubes-builder description"
   echo "Names: ${names}"
-  echo "Keys: ${keys}"
+  echo "Keys: ${keys_trimmed}"
 }
 
 block_max_chars(){
@@ -21,13 +22,31 @@ block_max_chars(){
   char_value="${2}"
   less_than="${3}"
   if test "${#char_value}" -ge "${less_than}"; then
-    echo "Error: ${char_key} is too long. Must be less than ${less_than} chars." >&2
+    echo "Error: ${char_key} is too long. Must be <${less_than} chars." >&2
     echo "Key contents: ${char_value}" >&2
     exit 1
   fi
 }
 
-keys="name branch group file_roots requires packager vendor url bug_url version project project_dir changelog readme license_csv license description summary saltfiles"
+keys="name
+branch
+group
+file_roots
+requires
+packager
+vendor
+url
+bug_url
+version
+project
+project_dir
+changelog
+readme
+license_csv
+license
+description
+summary
+saltfiles"
 
 name=""
 key=""
@@ -41,12 +60,14 @@ case "${1-}" in
   *) key="${1}"; shift;;
 esac
 if test -z "${key##* }"; then
-  echo "Key is empty: ${key}" >&2
+  echo "Key was not given" >&2
   exit 1
 fi
 
 command -v git >/dev/null || { echo "Missing program: git" >&2; exit 1; }
-cd "$(git rev-parse --show-toplevel)" || exit 1
+repo_toplevel="$(git rev-parse --show-toplevel)"
+test -d "${repo_toplevel}" || exit 1
+unset repo_toplevel
 ./scripts/requires-program.sh reuse
 
 if test "${key}" = "branch"; then
@@ -88,15 +109,19 @@ fi
 
 if test "${key}" = "license" || test "${key}" = "license_csv"; then
   license_csv="$(reuse --root "${project_dir}" lint |
-    awk -F ':' '/^* Used licenses:/{print $2}' | tr -d " ")"
-  license="$(echo "${license_csv}" | sed "s/,/ AND /g")"
+    awk -F ':' '/^\* Used licenses:/{print $2}' | tr " " "\n" | tr -d "," |
+    sort -d | tr -s "\n" "," | sed "s/^\,//;s/\,$//")"
+  license="$(echo "${license_csv}" | sed "s/\,/ AND /g")"
 fi
 
 ## The macro %autochangelog prints logs of all projects and we separate a
 ## project per directory. The disadvantage of the changelog below is it
 # #doesn't differentiate commits per version and release, but per commit id.
 if test "${key}" = "changelog"; then
-  changelog="$(TZ=UTC0 git log -n 50 --format=format:"* %cd %an <%ae> - %h%n- %s%n" --date=format:"%a %b %d %Y" -- "${project_dir}" | sed -re "s/^- +- */- /")"
+  changelog="$(TZ=UTC0 git log -n 50 \
+    --format=format:"* %cd %an <%ae> - %h%n- %s%n" \
+    --date=format:"%a %b %d %Y" -- "${project_dir}" | \
+    sed -re "s/^- +- */- /")"
 fi
 
 if test "${key}" = "description"; then
@@ -105,9 +130,10 @@ if test "${key}" = "description"; then
 fi
 
 if test "${key}" = "summary"; then
-  summary="$(sed -n "/^# ${name}$/,/^## Table of Contents$/{
-                     /./!d; /^#/d; /^SPDX/d; /^<!--/d; /^-->/d; s/\.$//; p}" \
-             -- "${readme}")"
+  summary="$(sed -n -e \
+              "/^# ${name}$/,/^## Table of Contents$/{
+              /./!d; /^#/d; /^SPDX/d; /^<!--/d; /^-->/d; s/\.$//; p}" \
+              -- "${readme}")"
   block_max_chars summary "${summary}" 70
 fi
 
@@ -115,7 +141,9 @@ if test "${key}" = "saltfiles" || test "${key}" = "requires"; then
   saltfiles="$(find "${project_dir}" -maxdepth 1 -name "*.sls")"
   # shellcheck disable=SC2086
   if test -n "${saltfiles}"; then
-    requires="$(sed -n '/^include:$/,/^\s*$/p' -- ${saltfiles} | sed "/^\s*- \./d;/{/d" | grep "^\s*- " | cut -d "." -f1 | sort -u | sed "s/- //")"
+    requires="$(sed -n '/^include:$/,/^\s*$/p' -- ${saltfiles} |
+      sed "/^\s*- \./d;/{/d" | grep "^\s*- " | cut -d "." -f1 | sort -u |
+      sed "s/- //")"
     if grep -qrn "{%-\? from \('\|\"\)utils" ${saltfiles}; then
       if test -n "${requires}"; then
         requires="${requires} utils"
@@ -138,7 +166,6 @@ if test "${key}" = "saltfiles" || test "${key}" = "requires"; then
 fi
 
 case "${key}" in
-  "") exit 1;;
   branch) echo "${branch}";;
   changelog) echo "${changelog}";;
   description) echo "${description}";;
@@ -158,4 +185,6 @@ case "${key}" in
   vendor) echo "${vendor}";;
   packager) echo "${packager}";;
   version) echo "${version}";;
+  "") exit 1;;
+  *) echo "Unsupported key" >&2; exit 1;;
 esac

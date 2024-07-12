@@ -120,6 +120,18 @@ fi
 %dnl TODO: missing '%ghost', files generated during %post, such as Qrexec policies.
 
 %changelog
+* Tue Jul 09 2024 Ben Grande <ben.grande.b@gmail.com> - 011a71a
+- style: limit line length per file extension
+
+* Thu Jul 04 2024 Ben Grande <ben.grande.b@gmail.com> - 383c840
+- doc: lint markdown files
+
+* Tue Jun 25 2024 Ben Grande <ben.grande.b@gmail.com> - d316999
+- doc: add browser isolation feature to design guide
+
+* Tue Jun 25 2024 Ben Grande <ben.grande.b@gmail.com> - 9c28068
+- refactor: prefer systemd sockets over socat
+
 * Tue Jun 25 2024 Ben Grande <ben.grande.b@gmail.com> - 4facf45
 - feat: use native TCP socket with Qrexec
 

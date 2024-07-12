@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# SPDX-FileCopyrightText: 2023 Benjamin Grande M. S. <ben.grande.b@gmail.com>
+# SPDX-FileCopyrightText: 2023 - 2024 Benjamin Grande M. S. <ben.grande.b@gmail.com>
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -16,6 +16,7 @@ if ! command -v git >/dev/null; then
 fi
 
 ## TODO: subdirectory? dir+repo
+# shellcheck disable=SC2154
 untrusted_repo="${QREXEC_SERVICE_ARGUMENT}"
 
 if test -z "${untrusted_repo}"; then
@@ -24,7 +25,10 @@ fi
 
 if ! (echo "${untrusted_repo}" | grep -q "^[A-Za-z0-9][A-Za-z0-9_.-]\+$")
 then
-  die "Forbidden characters in repository name. Allowed chars: letters, numbers, hyphen, underscore and dot. It cannot begin with hyphen, underscore or dot"
+  msg="Forbidden characters in agent name."
+  msg="${msg} Allowed chars: letters, numbers, hyphen, underscore and dot."
+  msg="${msg} Name cannot begin with hyphen, underscore or dot"
+  die "${msg}"
 fi
 
 ## Length arbitrarily set.
@@ -32,7 +36,7 @@ if test "${#untrusted_repo}" -gt 128; then
   die "Repository name is too long: ${#untrusted_repo}"
 fi
 
-base_path="$HOME/src"
+base_path="${HOME}/src"
 repo="${untrusted_repo}"
 
 case "${repo}" in
@@ -52,7 +56,8 @@ esac
 
 if test "${action}" != "Init"; then
   test -d "${path}" || die "Directory doesn't exist: ${repo}"
-  git -C "${path}" rev-parse >/dev/null 2>&1 || die "Not a git repository: ${repo}"
+  git -C "${path}" rev-parse >/dev/null 2>&1 ||
+    die "Not a git repository: ${repo}"
   is_bare="$(git -C "${path}" rev-parse --is-bare-repository)"
   test "${is_bare}" = "true" || die "Not a bare repository: ${repo}"
 fi

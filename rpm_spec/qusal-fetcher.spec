@@ -43,8 +43,8 @@ will be able to download from many protocol as long as the installed tools
 accepts them.
 
 Supported protocols: DICT, FILE, FTP, FTPS, GOPHER, GOPHERS, HTTP, HTTPS,
- IMAP, IMAPS, LDAP, LDAPS, MQTT, POP3, POP3S, RTMP, RTMPS, RTSP, SCP, SFTP,
- SMB, SMBS, SMTP, SMTPS, TELNET, TFTP, WS, WSS, RSYNC, BitTorrent.
+IMAP, IMAPS, LDAP, LDAPS, MQTT, POP3, POP3S, RTMP, RTMPS, RTSP, SCP, SFTP,
+SMB, SMBS, SMTP, SMTPS, TELNET, TFTP, WS, WSS, RSYNC, BitTorrent.
 
 %prep
 %setup -q
@@ -115,6 +115,12 @@ fi
 %dnl TODO: missing '%ghost', files generated during %post, such as Qrexec policies.
 
 %changelog
+* Mon Jul 08 2024 Ben Grande <ben.grande.b@gmail.com> - 523bca2
+- fix: conform files to editorconfig specification
+
+* Thu Jul 04 2024 Ben Grande <ben.grande.b@gmail.com> - 383c840
+- doc: lint markdown files
+
 * Fri Jun 21 2024 Ben Grande <ben.grande.b@gmail.com> - c84dfea
 - fix: generate RPM Specs for Qubes Builder V2
 

@@ -110,6 +110,15 @@ fi
 %dnl TODO: missing '%ghost', files generated during %post, such as Qrexec policies.
 
 %changelog
+* Tue Jul 09 2024 Ben Grande <ben.grande.b@gmail.com> - 011a71a
+- style: limit line length per file extension
+
+* Thu Jul 04 2024 Ben Grande <ben.grande.b@gmail.com> - 383c840
+- doc: lint markdown files
+
+* Fri Jun 28 2024 Ben Grande <ben.grande.b@gmail.com> - 72068e8
+- fix: add Mullvad Browser
+
 * Fri Jun 21 2024 Ben Grande <ben.grande.b@gmail.com> - c84dfea
 - fix: generate RPM Specs for Qubes Builder V2
 

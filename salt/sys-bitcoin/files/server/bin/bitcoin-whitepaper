@@ -20,12 +20,13 @@ has(){
 check_installed(){
   missing_programs=0
   for prog in "${@}"; do
+    # shellcheck disable=SC2310
     if ! has "${prog}"; then
       echo "Missing program: ${prog}" >&2
       missing_programs=1
     fi
   done
-  if test "${missing_programs}"; then
+  if test "${missing_programs}" = "1"; then
     exit 1
   fi
 }
@@ -43,9 +44,13 @@ validate_dir(){
 
 getblock(){
   check_installed bitcoin-cli xxd
+  # shellcheck disable=SC2312
   bitcoin-cli getblock "${block_hash}" 0 \
     | tail -c+92167 \
-    | for ((o=0;o<946;++o)); do read -rN420 x; echo -n "${x::130}${x:132:130}${x:264:130}" ; done \
+    | for ((o=0;o<946;++o)); do \
+        read -rN420 x; \
+        echo -n "${x::130}${x:132:130}${x:264:130}"; \
+      done \
     | xxd -r -p \
     | tail -c+9 \
     | head -c184292 \
@@ -54,6 +59,7 @@ getblock(){
 
 getrawtransaction(){
   check_installed bitcoin-cli xxd
+  # shellcheck disable=SC2312
   bitcoin-cli getrawtransaction "${txid}" 0 "${block_hash}" \
     | sed 's/0100000000000000/\n/g' \
     | tail -n +2 \
@@ -66,6 +72,7 @@ getrawtransaction(){
 
 gettxout(){
   check_installed bitcoin-cli jq xxd seq
+  # shellcheck disable=SC2312
   seq 0 947 \
     | (while read -r n; do bitcoin-cli gettxout "${txid}" "${n}" \
     | jq -r '.scriptPubKey.asm' \
@@ -77,15 +84,15 @@ gettxout(){
 }
 
 usage(){
-  echo "Usage: ${0##*/} getblock|getrawtransaction|gettxtout [DIR]"
-  echo "Note: gettxtout works with pruned node"
-  echo "Note: DIR defaults to \$HOME"
+  echo "Usage: ${0##*/} getblock|getrawtransaction|gettxout [DIR]"
+  echo "Note: gettxout works with pruned node"
+  echo "Note: DIR defaults to \${HOME}"
   exit 1
 }
 
 case "${1:-}" in
-  "getblock"|"getrawtransaction"|"gettxtout")
-    test -z "${2}" || dir="${2}"
+  "getblock"|"getrawtransaction"|"gettxout")
+    test -z "${2-}" || dir="${2}"
     validate_dir "${dir}"
     output_file="${dir}/${file}"
     "${1}"
